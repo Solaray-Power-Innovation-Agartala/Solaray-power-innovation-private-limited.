@@ -1,53 +1,84 @@
 
 document.addEventListener('DOMContentLoaded', () => {
 
-    const solarForm = document.getElementById('solarForm');
-    const resultsBox = document.getElementById('results');
-    const waCalcBtn = document.getElementById('waCalcBtn');
+    // 1. Solar Calculator Logic
+    const calcForm = document.getElementById('solarCalcForm');
+    const calcResults = document.getElementById('calcResults');
 
-    solarForm.addEventListener('submit', (e) => {
+    calcForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const monthlyBill = parseFloat(document.getElementById('monthlyBill').value);
+        const roofArea = parseFloat(document.getElementById('roofArea').value);
 
-        const bill = parseFloat(document.getElementById('bill').value);
-        const area = parseFloat(document.getElementById('area').value);
+        try {
+            // Call Backend API
+            const response = await fetch('/api/calculate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ monthlyBill, roofArea })
+            });
 
-        // Client-side calculations based on PM Surya Ghar guidelines
-        let kw = Math.ceil(bill / 1200);
-        const maxKwByArea = Math.floor(area / 80);
-        kw = Math.max(1, Math.min(kw, maxKwByArea, 10)); // Capacity between 1kW and 10kW
+            const data = await response.json();
 
-        let subsidy = 0;
-        if (kw === 1) subsidy = 30000;
-        else if (kw === 2) subsidy = 60000;
-        else if (kw >= 3) subsidy = 78000;
+            if (response.ok) {
+                document.getElementById('resCapacity').innerText = data.capacityKw + ' kW';
+                document.getElementById('resSubsidy').innerText = '₹ ' + data.subsidyAmount.toLocaleString('en-IN');
+                document.getElementById('resSavings').innerText = '₹ ' + data.monthlySavings.toLocaleString('en-IN');
+                document.getElementById('resEmi').innerText = '₹ ' + data.estimatedEmi.toLocaleString('en-IN');
+                calcResults.classList.remove('hidden');
+            }
+        } catch (err) {
+            console.error('Calculator API error:', err);
+            // Client-side fallback calculation
+            const kw = Math.min(Math.ceil(monthlyBill / 1000), Math.floor(roofArea / 80));
+            const cap = Math.max(1, kw);
+            let sub = cap === 1 ? 30000 : (cap === 2 ? 60000 : 78000);
+            
+            document.getElementById('resCapacity').innerText = cap + ' kW';
+            document.getElementById('resSubsidy').innerText = '₹ ' + sub.toLocaleString('en-IN');
+            document.getElementById('resSavings').innerText = '₹ ' + (cap * 1100).toLocaleString('en-IN');
+            document.getElementById('resEmi').innerText = '₹ ' + (cap * 650).toLocaleString('en-IN');
+            calcResults.classList.remove('hidden');
+        }
+    });
 
-        const monthlySavings = Math.round(kw * 1150);
-        const netCost = (kw * 62000) - subsidy;
+    // 2. Application Form Backend Submission
+    const inquiryForm = document.getElementById('solarInquiryForm');
+    const formStatus = document.getElementById('formStatus');
 
-        // SBI EMI @ 5.75% for 5 years
-        const r = 0.0575 / 12;
-        const n = 60;
-        const emi = Math.round((netCost * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1));
+    inquiryForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        formStatus.className = 'form-status';
+        formStatus.innerText = 'Submitting application...';
+        formStatus.style.display = 'block';
 
-        // Render results
-        document.getElementById('outKw').innerText = kw + ' kW';
-        document.getElementById('outSub').innerText = '₹ ' + subsidy.toLocaleString('en-IN');
-        document.getElementById('outSave').innerText = '₹ ' + monthlySavings.toLocaleString('en-IN');
-        document.getElementById('outEmi').innerText = '₹ ' + emi.toLocaleString('en-IN');
+        const formData = {
+            fullName: document.getElementById('fullName').value,
+            phone: document.getElementById('phone').value,
+            email: document.getElementById('email').value,
+            district: document.getElementById('district').value,
+            sanctionedLoad: document.getElementById('sanctionedLoad').value,
+            message: document.getElementById('message').value
+        };
 
-        // Construct dynamic WhatsApp link with populated calculation payload
-        const waMsg = encodeURIComponent(
-            `Hello Solaray Power Innovations,\n` +
-            `I calculated my rooftop solar requirement on your website:\n` +
-            `- Monthly Bill: ₹${bill}\n` +
-            `- Roof Area: ${area} Sq.Ft.\n` +
-            `- Recommended System: ${kw} kW\n` +
-            `- Expected Subsidy: ₹${subsidy}\n` +
-            `Please contact me for a physical site inspection.`
-        );
+        try {
+            const res = await fetch('/api/apply', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
 
-        waCalcBtn.href = `https://wa.me/919436452537?text=${waMsg}`;
-
-        resultsBox.classList.remove('hidden');
+            const result = await res.json();
+            if (res.ok) {
+                formStatus.className = 'form-status success';
+                formStatus.innerText = 'Thank you! Application ' + result.applicationId + ' received. Our solar engineer will contact you shortly.';
+                inquiryForm.reset();
+            } else {
+                throw new Error(result.message || 'Submission failed');
+            }
+        } catch (err) {
+            formStatus.className = 'form-status error';
+            formStatus.innerText = 'Failed to submit. Please contact us directly at (M) 9436452537.';
+        }
     });
 });
