@@ -1,5 +1,6 @@
 
 document.addEventListener('DOMContentLoaded', () => {
+
     const solarForm = document.getElementById('solarForm');
     const resultsBox = document.getElementById('results');
     const waCalcBtn = document.getElementById('waCalcBtn');
@@ -10,9 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const bill = parseFloat(document.getElementById('bill').value);
         const area = parseFloat(document.getElementById('area').value);
 
+        // Client-side calculations based on PM Surya Ghar guidelines
         let kw = Math.ceil(bill / 1200);
         const maxKwByArea = Math.floor(area / 80);
-        kw = Math.max(1, Math.min(kw, maxKwByArea, 10));
+        kw = Math.max(1, Math.min(kw, maxKwByArea, 10)); // Capacity between 1kW and 10kW
 
         let subsidy = 0;
         if (kw === 1) subsidy = 30000;
@@ -22,15 +24,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const monthlySavings = Math.round(kw * 1150);
         const netCost = (kw * 62000) - subsidy;
 
+        // SBI EMI @ 5.75% for 5 years
         const r = 0.0575 / 12;
         const n = 60;
         const emi = Math.round((netCost * r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1));
 
+        // Render results
         document.getElementById('outKw').innerText = kw + ' kW';
         document.getElementById('outSub').innerText = '₹ ' + subsidy.toLocaleString('en-IN');
         document.getElementById('outSave').innerText = '₹ ' + monthlySavings.toLocaleString('en-IN');
         document.getElementById('outEmi').innerText = '₹ ' + emi.toLocaleString('en-IN');
 
+        // Construct dynamic WhatsApp link with populated calculation payload
         const waMsg = encodeURIComponent(
             `Hello Solaray Power Innovations,\n` +
             `I calculated my rooftop solar requirement on your website:\n` +
@@ -42,6 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         waCalcBtn.href = `https://wa.me/919436452537?text=${waMsg}`;
+
         resultsBox.classList.remove('hidden');
     });
 });
