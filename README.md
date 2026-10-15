@@ -52,4 +52,4 @@ Address: South Barjala, Airport Road, Opposite HP Petrol Pump, Agartala, Tripura
 
 © Solaray Power Innovations Pvt Ltd. All Rights Reserved.
 
-### Driven By The Sun ☀️
+### Driven By The Sun 
