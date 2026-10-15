@@ -1,0 +1,1 @@
+# Solaray-power-innovation-private-limited.
